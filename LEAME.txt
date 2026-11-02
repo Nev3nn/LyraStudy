@@ -6,22 +6,28 @@ COMO USAR
    O programa cria uma subpasta em "PDFs" para cada materia (ex.: PDFs\Matematica).
 3. PDFs: coloque os arquivos na subpasta da materia e filtre por materia. Use "Pasta" para adicionar ou remover
    pastas (removidas vao para PDFs\_Removidas, nada e apagado) e marque "Estudado" em cada PDF.
-4. Foco e Loja: cronometro HH:MM:SS.mmm, modos Pomodoro (regressivo, com pausas) e Progressivo
-   (botao "Configurar timer"; o Progressivo e contagem livre, sem pausas nem ciclos). Cada minuto de foco rende 10 pontos para mobiliar a casa.
+4. Foco e Loja: cronometro HH:MM:SS.mmm, modos Pomodoro e Progressivo (botao "Configurar timer"). Cada minuto de foco
+   rende 10 pontos e XP para o predio em foco da LYRA CITY, a metropole isometrica que fica nesta mesma aba:
+   - cada dia em que voce bate a meta diaria vira um quadrado na cidade; 7 dias fundem-se em Semana,
+     4 semanas em Mes e 12 meses no Ano (visoes Dia / Semana / Mes / Ano no topo do mapa);
+   - predios, quarteiroes e dias aparecem em posicoes aleatorias; 2 pracas por semana, tambem aleatorias;
+   - aba Cidade: foco, construcao automatica, "predio do dia aleatorio", quadrado selecionado e botoes de teste (Dev);
+   - abas Predios / Veiculos / Pracas: compre com seus pontos e escolha o estilo das pracas.
    Atalho de teste: Ctrl+Shift+P (ou o botao "+5000 pts") adiciona 5000 pontos.
-5. Revisao: flashcards com imagens (frente e verso), edicao, categorias/subcategorias e repeticao espacada
-   (Errei / Dificil / Bom / Facil). As imagens ficam na pasta "Imagens", ao lado do .exe.
-6. Desempenho (abas Visao geral / Mes / Simulados): nota do mes de 0 a 10 (metas, constancia e resultados),
-   calendario de estudo e historico completo de simulados. Registre simulados (escala da prova, acertos totais e por materia). O programa normaliza tudo
-   para 0-10, mostra seus pontos fracos e sugere novos graus de dificuldade (sempre calculados so com os ultimos 3 simulados) ("Aceita a Nova Grade?").
-   Sem simulados por mais de 1 mes, voce recebe um lembrete para revisar as dificuldades.
-7. Seu progresso fica em "data.json", ao lado do .exe. Copie esse arquivo para fazer backup
-   (e para manter seus dados ao trocar de versao).
+5. Revisao: flashcards com imagens, edicao, categorias/subcategorias e repeticao espacada.
+6. Desempenho (Visao geral / Mes / Simulados): nota do mes de 0 a 10, calendario e historico de simulados.
+   O reajuste de pesos usa SO os 3 ultimos simulados.
+7. Seu progresso fica em "data.json", ao lado do .exe (inclui a cidade). Copie esse arquivo para fazer backup.
+   O antigo "Foco e Loja" com a casa de moveis foi substituido pela cidade (os pontos continuam valendo).
 
 AVISO DO WINDOWS
 Sem assinatura digital, o SmartScreen pode avisar. Clique em "Mais informacoes" > "Executar assim mesmo".
 
 COMO GERAR O .EXE (em um Windows com Python 3.9+, na pasta do projeto)
-  pip install customtkinter pillow pyinstaller
-  pyinstaller --onefile --noconsole --collect-all customtkinter --name LyraStudy main.py
-O arquivo fica em dist\LyraStudy.exe.
+  pip install -r requirements.txt pyinstaller
+  pyinstaller --onefile --noconsole --collect-all customtkinter --add-data "assets;assets" --name LyraStudy main.py
+O arquivo fica em dist\LyraStudy.exe (as imagens da cidade ficam embutidas no .exe; "assets;assets" usa ponto e virgula no Windows).
+
+REGERAR OS SPRITES DA CIDADE (opcional)
+  pip install -r requirements-dev.txt
+  python tools/process_assets.py      (le art-source/*.png e escreve assets/city/)

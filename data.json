@@ -1,0 +1,83 @@
+{
+  "points": 4030,
+  "sessions": {
+    "2026-11-02": {
+      "total": 83
+    }
+  },
+  "daily_goal_h": 0.05,
+  "schedule": {
+    "Seg": []
+  },
+  "subjects": {},
+  "timer": {},
+  "city": {
+    "D": 8,
+    "t": [
+      {
+        "b": "casa",
+        "lv": 3,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      },
+      {
+        "b": "casa",
+        "lv": 1,
+        "xp": 0
+      }
+    ],
+    "ob": [
+      "casa",
+      "bib",
+      "neo"
+    ],
+    "oc": [
+      "car_a",
+      "car_b",
+      "car_c"
+    ],
+    "plaza": "auto",
+    "unl": {
+      "plaza_1": 1
+    },
+    "sel": 7,
+    "focus": 1,
+    "view": "sem",
+    "auto": true,
+    "rand": false,
+    "model": "casa",
+    "counted": [
+      "2026-11-02"
+    ],
+    "seed": 297462178
+  }
+}

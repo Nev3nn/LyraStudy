@@ -1,7 +1,7 @@
 import time
 from datetime import date
 import customtkinter as ctk
-from house import ITEMS, TITLES, draw
+from city.widget import CityWidget
 from rules import PTS_PER_MIN, goal_min, studied
 from storage import save, TIMER_DEFAULT
 from theme import PRIMARY, GOLD, TEAL, RED, MUTED, header, animate
@@ -18,7 +18,7 @@ class FocusTab(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent")
         self.app, self.running, self.job, self.phase, self.done = app, False, None, "Foco", 0
         self.base, self.t0, self.paid = 0.0, 0.0, 0
-        header(self, "⏱ Foco & Loja", "estude, ganhe pontos e monte sua casa")
+        header(self, "⏱ Foco & Loja", "estude, ganhe pontos e construa sua metrópole")
         L = ctk.CTkFrame(self); L.pack(side="left", fill="y", padx=(0, 8), pady=4, ipadx=10)
         self.phase_lbl = ctk.CTkLabel(L, text="", font=("Segoe UI", 15, "bold")); self.phase_lbl.pack(pady=(14, 0))
         self.clock = ctk.CTkLabel(L, text="", font=("Consolas", 30, "bold"), text_color=GOLD); self.clock.pack(pady=10, padx=6)
@@ -32,10 +32,8 @@ class FocusTab(ctk.CTkFrame):
         self.info = ctk.CTkLabel(L, text=f"+{PTS_PER_MIN} pontos por minuto de foco", text_color="gray70", wraplength=230); self.info.pack(pady=10)
         self.dlbl = ctk.CTkLabel(L, text="", text_color=MUTED); self.dlbl.pack()
         self.dbar = ctk.CTkProgressBar(L, height=8, progress_color=TEAL); self.dbar.set(0); self.dbar.pack(fill="x", padx=20, pady=(2, 10))
-        R = ctk.CTkFrame(self); R.pack(side="left", fill="both", expand=True, pady=4)
-        self.title = ctk.CTkLabel(R, font=("Segoe UI", 17, "bold")); self.title.pack(pady=(10, 4))
-        self.canvas = ctk.CTkCanvas(R, width=544, height=344, highlightthickness=0, bg="#151a2b"); self.canvas.pack()
-        self.shop = ctk.CTkScrollableFrame(R, label_text="🛒 Loja"); self.shop.pack(fill="both", expand=True, padx=10, pady=8)
+        self.city = CityWidget(self, app, lambda: self.running)   # Lyra City: mapa isométrico + loja de prédios, carros e praças
+        self.city.pack(side="left", fill="both", expand=True, pady=4)
         self.reset()
 
     def cfg(self):
@@ -97,7 +95,8 @@ class FocusTab(ctk.CTkFrame):
         s = d["sessions"].setdefault(date.today().isoformat(), {"total": 0})
         s["total"] += 1; s[self.subj.get()] = s.get(self.subj.get(), 0) + 1
         d["points"] += PTS_PER_MIN
-        save(d); self.app.update_header(); self.refresh()
+        self.city.on_minute()    # XP para o prédio em foco e, ao bater a meta diária, um novo quadrado na cidade (também salva e atualiza o cabeçalho)
+        self.update_goal()
 
     def settings(self):
         c = self.cfg(); w = ctk.CTkToplevel(self); w.title("Configurar timer"); w.geometry("380x360")
@@ -131,24 +130,10 @@ class FocusTab(ctk.CTkFrame):
         ctk.CTkButton(w, text="Salvar", command=ok, **PRIMARY).pack(pady=8)
         build(c["mode"])
 
-    def buy(self, name, price):
-        d = self.app.data
-        if d["points"] >= price and name not in d["items"]:
-            d["points"] -= price; d["items"].append(name); self.app.commit()
+    def update_goal(self):
+        d = self.app.data; g, got = goal_min(d), studied(d, date.today())
+        self.dlbl.configure(text=f"Meta de hoje: {got}/{g} min"); animate(self.dbar, min(1, got / g) if g else 0, 600, True)
 
     def refresh(self):
-        d = self.app.data; n = len(d["items"])
-        self.subj.configure(values=list(d["subjects"]) + ["Geral"])
-        self.title.configure(text=f"🏠 {TITLES[min(n // 6, 4)]} — {n}/{len(ITEMS)} itens")
-        g, got = goal_min(d), studied(d, date.today())
-        self.dlbl.configure(text=f"Meta de hoje: {got}/{g} min"); animate(self.dbar, min(1, got / g) if g else 0, 600, True)
-        draw(self.canvas, d["items"])
-        for w in self.shop.winfo_children(): w.destroy()
-        for name, emo, price, *_ in ITEMS:
-            own = name in d["items"]
-            row = ctk.CTkFrame(self.shop, fg_color="transparent"); row.pack(fill="x", pady=2)
-            ctk.CTkLabel(row, text=f"{emo} {name}", width=170, anchor="w").pack(side="left")
-            ctk.CTkLabel(row, text=f"{price} pts", text_color=GOLD).pack(side="left", padx=8)
-            ctk.CTkButton(row, width=100, text="✔ Comprado" if own else "Comprar",
-                          state="disabled" if own or d["points"] < price else "normal",
-                          command=lambda a=name, p=price: self.buy(a, p)).pack(side="right")
+        self.subj.configure(values=list(self.app.data["subjects"]) + ["Geral"])
+        self.update_goal(); self.city.refresh()

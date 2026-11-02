@@ -1,0 +1,4 @@
+# Só para regenerar os sprites (tools/process_assets.py)
+pillow
+numpy
+scipy
