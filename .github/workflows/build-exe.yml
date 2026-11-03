@@ -25,7 +25,7 @@ jobs:
 
       - name: Compilar o executável
         run: |
-          pyinstaller --onefile --noconsole --collect-all customtkinter --add-data "assets;assets" --add-data "city;city" --name LyraStudy main.py
+          pyinstaller --onefile --collect-all customtkinter --add-data "assets;assets" --add-data "city;city" --name LyraStudy main.py
 
       - name: Upload do EXE como artefato
         uses: actions/upload-artifact@v4
