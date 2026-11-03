@@ -24,19 +24,12 @@ class FX:
     def active(self): return bool(self.anims or self.pops)
 
 class Camera:
-    def __init__(self): self.k, self.ox, self.oy, self.tg = 20., 0., 0., (20., 0., 0.)
+    """Câmera FIXA: enquadra a região inteira, centralizada, uma única vez por visão/tamanho do canvas. Sem pan, sem zoom, sem easing."""
+    def __init__(self): self.k, self.ox, self.oy = 20., 0., 0.
     def P(self, x, y, z=0.): return (self.ox + (x - y) * self.k, self.oy + (x + y) * self.k / 2 - z * self.k)
-    def fit(self, R, W, H, tall, snap=False):
-        xr = (R[2] - R[0]) + (R[3] - R[1]); k = max(6., min(150., W * .94 / xr, H * .92 / (xr / 2 + tall)))
-        self.tg = (k, W / 2 - ((R[0] - R[3]) + (R[2] - R[1])) / 2 * k, H / 2 - ((R[0] + R[1] + R[2] + R[3]) / 4 - tall / 2) * k)
-        if snap: self.k, self.ox, self.oy = self.tg
-    def step(self):
-        for n, i in (("k", 0), ("ox", 1), ("oy", 2)):
-            d = self.tg[i] - getattr(self, n); setattr(self, n, self.tg[i] if abs(d) < .05 else getattr(self, n) + d * .22)
-    def moving(self): return abs(self.tg[0] - self.k) + abs(self.tg[1] - self.ox) + abs(self.tg[2] - self.oy) > .05
-    def zoom(self, f, px, py):
-        k = max(5., min(220., self.tg[0] * f)); r = k / self.tg[0]; self.tg = (k, px - (px - self.tg[1]) * r, py - (py - self.tg[2]) * r)
-    def pan(self, dx, dy): self.tg = (self.tg[0], self.tg[1] + dx, self.tg[2] + dy); self.ox += dx; self.oy += dy
+    def fit(self, R, W, H, tall):
+        xr = (R[2] - R[0]) + (R[3] - R[1]); self.k = max(6., min(150., W * .94 / xr, H * .92 / (xr / 2 + tall)))
+        self.ox = W / 2 - ((R[0] - R[3]) + (R[2] - R[1])) / 2 * self.k; self.oy = H / 2 - ((R[0] + R[1] + R[2] + R[3]) / 4 - tall / 2) * self.k
 
 class Renderer:
     def __init__(self):
@@ -51,11 +44,23 @@ class Renderer:
     def scaled(self, key, w, h, flip=False):
         kk = (key, w, h, flip)
         if kk not in self._sc:
-            if len(self._sc) > 700: self._sc.clear()
+            if len(self._sc) > 900: self._sc = {k_: v for k_, v in self._sc.items() if k_[0] == "thumb"}   # limite de memória (a câmera fixa gera poucos tamanhos)
             im = self.sprite(key).resize((max(1, w), max(1, h)), Image.BILINEAR); self._sc[kk] = im.transpose(Image.FLIP_LEFT_RIGHT) if flip else im
         return self._sc[kk]
     def thumb(self, key, height):
-        im = self.sprite(key); return im.resize((max(1, int(im.width * height / im.height)), height), Image.LANCZOS)
+        kk = ("thumb", key, height)
+        if kk not in self._sc: im = self.sprite(key); self._sc[kk] = im.resize((max(1, int(im.width * height / im.height)), height), Image.LANCZOS)
+        return self._sc[kk]
+    @staticmethod
+    def car_step(v): return max(.2, round(v * 5) / 5)                       # entrada do carro em 5 passos => poucos tamanhos
+    def car_size(self, model, cam, step):
+        m = self.meta["cars/" + model]; s = cam.k * .8 / m["w"] * step; return int(m["w"] * s) + 1, int(m["h"] * s) + 1
+    def prewarm(self, city, cam):
+        """Gera de antemão todas as versões redimensionadas dos carros (5 passos x 2 sentidos) — o laço de desenho só LÊ o cache."""
+        for model in city.s["oc"]:
+            for step in (.2, .4, .6, .8, 1.0):
+                w, h = self.car_size(model, cam, step)
+                for flip in (False, True): self.scaled("cars/" + model, w, h, flip)
     def tall(self, city, R):
         """Margem superior (em células) para caber o prédio mais alto da região."""
         M = 1.0
@@ -117,9 +122,11 @@ class Renderer:
                 if not (T and T["b"]):
                     pts = [P(cx + .3, cy + .3, z + .03), P(cx + .7, cy + .3, z + .03), P(cx + .7, cy + .7, z + .03), P(cx + .3, cy + .7, z + .03), P(cx + .3, cy + .3, z + .03)]
                     d.line(pts, fill=mix(CYAN, LOTC, .35 + .2 * math.sin(t * 3)), width=2); return
-                key = C.building_key(T["b"], T["lv"]); m = self.meta[key]; pp = fx.pops.get(i); ps = back(clamp((t - pp) / .5)) if pp is not None else 1.0   # sprite SEGUE o nível atual
-                s = 2 * k * C.LOT * C.BLD_FILL / m["bw"] * max(.05, sc * ps); w, h = int(m["w"] * s) + 1, int(m["h"] * s) + 1
-                spr = self.scaled(key, w, h) if abs(sc * ps - 1) < 1e-3 else self.sprite(key).resize((max(1, w), max(1, h)), Image.BILINEAR)
+                key = C.building_key(T["b"], T["lv"])                    # sprite SEGUE o nível atual (casa_1 → casa_2 → casa_3)
+                if key is None: return
+                m = self.meta[key]; pp = fx.pops.get(i); ps = back(clamp((t - pp) / .5)) if pp is not None else 1.0
+                q = max(.05, round(sc * ps * 20) / 20)                   # escala quantizada em passos de 5%: os tamanhos animados também caem no cache
+                s = 2 * k * C.LOT * C.BLD_FILL / m["bw"] * q; w, h = int(m["w"] * s) + 1, int(m["h"] * s) + 1; spr = self.scaled(key, w, h)
                 sx, sy = P(cx + .5, cy + .5, z + .02); px, py = int(sx - m["ax"] * m["w"] * s), int(sy + m["bw"] * s / 4 - m["h"] * s)
                 img.paste(spr, (px, py), spr); occ.append((cx + cy + 1, (px, py, px + w, py + h), spr)); self.tops[i] = (sx, py)
             objs.append((x + dx + y + dy + 1, cell))
@@ -149,7 +156,7 @@ class Renderer:
         for c in sorted(cars, key=lambda c: c["x"] + c["dx"] * c["t"] + c["y"] + c["dy"] * c["t"]):
             x, y = c["x"] + c["dx"] * c["t"], c["y"] + c["dy"] * c["t"]
             if not (R[0] <= x <= R[2] and R[1] <= y <= R[3]): continue
-            key_ = "cars/" + c["m"]; m = meta[key_]; s = cam.k * .8 / m["w"] * back(clamp((t - c["born"]) / .5)); w, h = int(m["w"] * s) + 1, int(m["h"] * s) + 1
+            key_ = "cars/" + c["m"]; w, h = self.car_size(c["m"], cam, self.car_step(back(clamp((t - c["born"]) / .5))))   # entrada do carro usa tamanhos pré-aquecidos
             spr = self.scaled(key_, w, h, bool(c["dx"])); sx, sy = P(x + (.14 if c["dx"] else 0) + (-.14 if c["dy"] else 0), y + (.14 if c["dx"] else 0) , 0)
             px, py = int(sx - w / 2), int(sy - h * .8); img.paste(spr, (px, py), spr); dep = x + y
             for od, (l, tp, r, b), osp in occ:                           # oclusão: prédios/praças À FRENTE do carro são colados de novo por cima

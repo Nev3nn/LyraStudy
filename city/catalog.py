@@ -22,7 +22,8 @@ def sprite_path(key):
 # ---- urbanismo (ajuste aqui o respiro visual do mapa) ----
 STREET = 0.40            # largura das ruas, em células (antes: 0,12 — agora ~3x mais larga)
 LOT = 1 - STREET         # lado do lote que sobra dentro de cada célula
-BLD_FILL = 0.92          # fração do lote ocupada pela base do prédio (menor = prédios mais afastados)
+BLD_FILL = 0.78          # fração do lote ocupada pela base do prédio (antes 0,92): prédios bem mais afastados
+FRAME_MS, HEAVY_MS, IDLE_MS = 33, 50, 100   # laço de desenho: ~30 fps; 20 fps se o quadro for pesado; 10 verificações/s com a aba oculta
 PER = 336                # dias por ano (12 meses x 4 semanas x 7 dias)
 XP_PER_MIN = 4           # XP do prédio em foco por minuto estudado
 TRAFFIC = 0.8            # tráfego 20% menor

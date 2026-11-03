@@ -9,7 +9,7 @@ COMO USAR
 4. Foco e Loja: cronometro HH:MM:SS.mmm, modos Pomodoro e Progressivo (botao "Configurar timer"). Cada minuto de foco
    rende 10 pontos e XP para o predio em foco da LYRA CITY, a metropole isometrica que fica nesta mesma aba:
    - cada dia em que voce bate a meta diaria vira um quadrado na cidade; 7 dias fundem-se em Semana,
-     4 semanas em Mes e 12 meses no Ano (visoes Dia / Semana / Mes / Ano no topo do mapa);
+     4 semanas em Mes e 12 meses no Ano (visoes Dia / Semana / Mes / Ano no topo do mapa; a camera e fixa, sem arrastar nem zoom);
    - predios, quarteiroes e dias aparecem em posicoes aleatorias; 2 pracas por semana, tambem aleatorias;
    - aba Cidade: foco, construcao automatica, "predio do dia aleatorio", quadrado selecionado e botoes de teste (Dev);
    - abas Predios / Veiculos / Pracas: compre com seus pontos e escolha o estilo das pracas.

@@ -18,7 +18,7 @@ art-source/    as 11 artes originais (predio*.png, carros*.png, cidade_vazia.png
 ## Ajustes pedidos
 | Pedido | Onde |
 |---|---|
-| Ruas mais largas / prédios mais afastados | `catalog.py`: `STREET` (0,12 → 0,40) e `BLD_FILL` (fração do lote ocupada pelo prédio) |
+| Ruas largas / prédios bem afastados | `catalog.py`: `STREET = 0.40` (antes 0,12) e `BLD_FILL = 0.78` (base do prédio = 0,47 da célula; antes 0,55) |
 | Prédios aleatórios por mês e semana | `layout.py`: o mês sorteia 1 dos 12 blocões, a semana 1 de 4 quadrantes, o dia 1 de 9 células |
 | Praças mais frequentes e aleatórias | `engine.geom()`: 2 praças por semana iniciada (as 2 células de sobra de cada semana, em posições sorteadas); estilo "aleatório" ou fixo na aba Praças |
 | Prédio do dia aleatório | `engine.pick_building()` + chave "🎲 Prédio do dia aleatório" (aba Cidade) e botão 🎲 na fundação livre |
@@ -32,3 +32,15 @@ art-source/    as 11 artes originais (predio*.png, carros*.png, cidade_vazia.png
 - **XP**: cada minuto de foco dá 4 XP ao prédio em foco (nível n → n+1 custa 100·n XP). Ao chegar ao máximo, o foco passa ao próximo prédio.
 - **Moeda**: os pontos do Lyra Study (`data["points"]`).
 - **Estado**: `data["city"]` dentro do `data.json` (a semente do mapa também fica lá).
+
+## Revisão: travamento, câmera e cache
+- **Causa do congelamento:** no laço antigo, com a aba oculta (o caso logo ao abrir o app) o código agendava o próximo quadro duas vezes
+  (um `after` no ramo "oculto" e outro no `finally`), então o número de agendamentos dobrava a cada passada até travar a thread principal.
+  Agora `CityWidget._tick` tem **um único ponto de agendamento**, id guardado em `_job` e cancelado em `destroy()`; valida `winfo_exists()`;
+  usa 33 ms (50 ms se o quadro for pesado) e 100 ms com a aba oculta (sem desenhar); exceções no desenho não derrubam o laço.
+- **Câmera fixa:** sem arrastar, sem zoom e sem easing. `Camera.fit()` enquadra e centraliza a região da visão uma vez (e de novo só se a
+  visão ou o tamanho do canvas mudar, com debounce). O clique ainda seleciona um quadrado.
+- **Cache de imagens:** `Renderer.sprite()` abre cada WebP uma vez; `scaled()` guarda cada tamanho; as escalas animadas (pop de prédio e entrada
+  de carro) são quantizadas e os carros são pré-aquecidos (`prewarm`). Há um único `PhotoImage`, recriado só se o canvas mudar de tamanho.
+  Teste: 120 quadros seguidos com 0 `Image.open` e 0 `resize`.
+- **Medidas (ano completo, 336 dias, 19 carros):** ~2,5 ms por quadro parado e ~16 ms durante a fusão do ano.
