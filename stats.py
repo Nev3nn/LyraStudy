@@ -1,3 +1,5 @@
+import clock
+from util import fmt_dur
 from datetime import date
 import customtkinter as ctk
 import history, month
@@ -12,7 +14,7 @@ class StatsTab(ctk.CTkFrame):
     def __init__(self, master, app):
         super().__init__(master, fg_color="transparent")
         self.app, self.view = app, "Visão geral"
-        t = date.today(); self.month = (t.year, t.month)
+        t = clock.today(); self.month = (t.year, t.month)
         header(self, "📊 Desempenho", "metas, constância e simulados")
         self.seg = ctk.CTkSegmentedButton(self, values=self.VIEWS, command=self.set_view); self.seg.pack(anchor="w", pady=(0, 6))
         self.body = ctk.CTkScrollableFrame(self, fg_color="transparent"); self.body.pack(fill="both", expand=True)
@@ -55,7 +57,7 @@ class StatsTab(ctk.CTkFrame):
 
     # ---------- Visão geral ----------
     def overview(self):
-        d, today = self.app.data, date.today(); g = goal_min(d)
+        d, today = self.app.data, clock.today(); g = goal_min(d)
         days = [x for x in week_days() if x <= today]
         hoje, semana = studied(d, today), sum(studied(d, x) for x in days)
         if reminder_due(d):
@@ -64,16 +66,16 @@ class StatsTab(ctk.CTkFrame):
                          wraplength=560, justify="left").pack(side="left", padx=12, pady=10)
             ctk.CTkButton(b, text="Revisar agora", width=110, command=lambda: WeightsDialog(self, self.app), **PRIMARY).pack(side="right", padx=12)
         self.kpis([("🏅", grade(d, today.year, today.month)["score"], "nota do mês (0 a 10)", GOLD, "{:.1f}"),
-                   ("⏱", hoje, f"min hoje (meta {g})", TEAL, "{:.0f}"),
+                   ("⏱", 0, f"estudado hoje (meta {fmt_dur(g)})", TEAL, "", fmt_dur(hoje)),
                    ("🔥", streak(d), "dias seguidos na meta", RED, "{:.0f}"),
                    ("📝", len(d["simulados"]), "simulados feitos", VIOLET, "{:.0f}")])
         s = self.section("Metas")
-        self.bar(s, f"{'✅' if hoje >= g else '⏳'} Hoje", hoje, g, right=f"{hoje}/{g} min")
-        self.bar(s, f"{'✅' if semana >= g * 7 else '⏳'} Semana", semana, g * 7, right=f"{semana}/{g * 7} min")
+        self.bar(s, f"{'✅' if hoje >= g else '⏳'} Hoje", hoje, g, right=f"{fmt_dur(hoje)} / {fmt_dur(g)}")
+        self.bar(s, f"{'✅' if semana >= g * 7 else '⏳'} Semana", semana, g * 7, right=f"{fmt_dur(semana)} / {fmt_dur(g * 7)}")
         s = self.section("Matérias da semana")
         for subj, m in weekly_minutes(d["subjects"], d["daily_goal_h"]).items():
             done = sum(studied(d, x, subj) for x in days)
-            self.bar(s, subj + ("  ⚠ pendente" if done < m else "  ✅"), done, m, tag_color(subj), f"{done}/{m} min")
+            self.bar(s, subj + ("  ⚠ pendente" if done < m else "  ✅"), done, m, tag_color(subj), f"{fmt_dur(done)} / {fmt_dur(m)}")
         s = self.section("Penalidades do ano")
         year = str(today.year); lost = sum(e["loss"] for e in d["penalty_log"] if e["date"].startswith(year))
         ctk.CTkLabel(s, text=f"Pontos perdidos em {year}: {lost}  •  dias seguidos sem meta: {d['streak_miss']}",

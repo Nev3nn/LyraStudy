@@ -1,3 +1,4 @@
+import clock
 from datetime import date
 import customtkinter as ctk
 from rules import build_schedule, weekly_minutes, analyze, last3
@@ -78,7 +79,7 @@ class SimuladoDialog(ctk.CTkToplevel):
         for n in res:
             if n not in d["subjects"]: d["subjects"][n] = 3; added = True  # matéria nova entra com dificuldade 3
         if added: d["schedule"] = build_schedule(d["subjects"], d["daily_goal_h"], d["per_day"])
-        d["simulados"].append({"date": date.today().isoformat(), "scale": self.scale, "hits": self.hits,
+        d["simulados"].append({"date": clock.today().isoformat(), "scale": self.scale, "hits": self.hits,
                                "score10": round(self.hits / self.scale * 10, 2), "subjects": res})
         save(d); self.destroy(); self.on_done()
 
@@ -101,7 +102,7 @@ class WeightsDialog(ctk.CTkToplevel):
             d = app.data
             d["subjects"] = {s: int(round(x.get())) for s, x in self.sl.items()}
             d["schedule"] = build_schedule(d["subjects"], d["daily_goal_h"], d["per_day"])
-            d["schedule_date"] = date.today().isoformat(); save(d); self.destroy(); app.refresh()
+            d["schedule_date"] = clock.today().isoformat(); save(d); self.destroy(); app.refresh()
         ctk.CTkButton(self, text="Salvar e refazer cronograma", command=ok, **PRIMARY).pack(pady=12)
 
 class ProposalDialog(ctk.CTkToplevel):

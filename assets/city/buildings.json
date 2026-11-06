@@ -1,0 +1,34 @@
+{
+ "models": [
+  {
+   "id": "mad",
+   "n": "Biblioteca de Madeira",
+   "p": 0,
+   "max": 4
+  },
+  {
+   "id": "tij",
+   "n": "Residência de Tijolos",
+   "p": 0,
+   "max": 4
+  },
+  {
+   "id": "vid",
+   "n": "Torre de Vidro",
+   "p": 600,
+   "max": 4
+  },
+  {
+   "id": "eco",
+   "n": "Eco Escritório",
+   "p": 900,
+   "max": 3
+  },
+  {
+   "id": "got",
+   "n": "Capela Gótica",
+   "p": 1400,
+   "max": 3
+  }
+ ]
+}

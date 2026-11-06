@@ -6,14 +6,17 @@ COMO USAR
    O programa cria uma subpasta em "PDFs" para cada materia (ex.: PDFs\Matematica).
 3. PDFs: coloque os arquivos na subpasta da materia e filtre por materia. Use "Pasta" para adicionar ou remover
    pastas (removidas vao para PDFs\_Removidas, nada e apagado) e marque "Estudado" em cada PDF.
+3b. PDFs agora e um explorador: abra pastas (inclusive subpastas), volte pela trilha ou por "Voltar", crie e remova pastas em qualquer nivel
+   e mova PDFs entre pastas (botao com a pasta no cartao do PDF).
 4. Foco e Loja: cronometro HH:MM:SS.mmm, modos Pomodoro e Progressivo (botao "Configurar timer"). Cada minuto de foco
    rende 10 pontos e XP para o predio em foco da LYRA CITY, a metropole isometrica que fica nesta mesma aba:
-   - cada dia em que voce bate a meta diaria vira um quadrado na cidade; 7 dias fundem-se em Semana,
-     4 semanas em Mes e 12 meses no Ano (visoes Dia / Semana / Mes / Ano no topo do mapa; a camera e fixa, sem arrastar nem zoom);
-   - predios, quarteiroes e dias aparecem em posicoes aleatorias; 2 pracas por semana, tambem aleatorias;
-   - aba Cidade: foco, construcao automatica, "predio do dia aleatorio", quadrado selecionado e botoes de teste (Dev);
-   - abas Predios / Veiculos / Pracas: compre com seus pontos e escolha o estilo das pracas.
-   Atalho de teste: Ctrl+Shift+P (ou o botao "+5000 pts") adiciona 5000 pontos.
+   - cada dia em que voce bate a meta diaria vira um quadrado; 7 dias fundem-se em Semana, 4 semanas em Mes e 12 meses no Ano
+     (visoes Dia / Semana / Mes / Ano no topo do mapa; a camera e fixa);
+   - botao "🛒 Loja": abre a loja por cima da cidade (minimapa + Predios, Veiculos e Pracas);
+   - pracas: metas do MES (1 hora, 1 dia, 7 dias) reiniciam todo mes; com 2+ liberadas surge uma praca nova a cada 5 dias;
+   - clique no logo "Lyra Study" (Modo Memoria): rever a foto e as metricas de cada ano concluido;
+   - botao "🔐 Admin" (ou Ctrl+Shift+A): conta de testes — primeiro acesso cria a senha; permite adiantar horas/pontos/niveis e avancar o calendario.
+   Tempos sao exibidos como "2h e 30 min".
 5. Revisao: flashcards com imagens, edicao, categorias/subcategorias e repeticao espacada.
 6. Desempenho (Visao geral / Mes / Simulados): nota do mes de 0 a 10, calendario e historico de simulados.
    O reajuste de pesos usa SO os 3 ultimos simulados.

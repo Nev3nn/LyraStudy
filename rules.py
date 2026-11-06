@@ -1,4 +1,5 @@
 """Regras do app: cronograma, penalidades e reajuste por simulados."""
+import clock
 import calendar
 from datetime import date, timedelta
 
@@ -48,7 +49,7 @@ def build_schedule(subjects, daily_h, per_day=2):
     return sched
 
 def week_days():
-    t = date.today()
+    t = clock.today()
     mon = t - timedelta(t.weekday())
     return [mon + timedelta(i) for i in range(7)]
 
@@ -60,7 +61,7 @@ def goal_min(d):
 
 def apply_penalties(d):
     """A partir do 2º dia seguido sem bater a meta, perde 50 pts x dias seguidos."""
-    today, last = date.today(), d.get("last_checked")
+    today, last = clock.today(), d.get("last_checked")
     d["last_checked"] = today.isoformat()
     if not last or not d["schedule"]:
         return
@@ -112,7 +113,7 @@ def last3(d):
 def reminder_due(d):
     """True se faz mais de 30 dias do último simulado (ou da criação do cronograma)."""
     last = d["simulados"][-1]["date"] if d["simulados"] else d.get("schedule_date")
-    return bool(d["schedule"] and last and (date.today() - date.fromisoformat(last)).days > 30)
+    return bool(d["schedule"] and last and (clock.today() - date.fromisoformat(last)).days > 30)
 
 def schedule_card(c, grade):
     """Espaçamento estilo Anki. grade: 0 Errei, 1 Difícil, 2 Bom, 3 Fácil."""
@@ -125,10 +126,10 @@ def schedule_card(c, grade):
         elif c["reps"] == 1: iv = (2, 4, 6)[grade - 1]
         else: iv = max(c["interval"] + 1, round(c["interval"] * c["ease"] * (0.8, 1, 1.3)[grade - 1]))
         c["interval"], c["reps"] = iv, c["reps"] + 1
-    c["due"] = (date.today() + timedelta(c["interval"])).isoformat()
+    c["due"] = (clock.today() + timedelta(c["interval"])).isoformat()
 
 def month_stats(d, y, m):
-    today, g, n = date.today(), goal_min(d), calendar.monthrange(y, m)[1]
+    today, g, n = clock.today(), goal_min(d), calendar.monthrange(y, m)[1]
     days = [(date(y, m, i), None if date(y, m, i) > today else studied(d, date(y, m, i))) for i in range(1, n + 1)]
     past = [x for _, x in days if x is not None]
     return {"days": days, "n": n, "goal": g, "elapsed": len(past), "studied": sum(past),
@@ -146,7 +147,7 @@ def grade(d, y, m):
     return {"score": round(score, 1), "metas": metas, "const": const, "res": res}
 
 def streak(d):
-    day, g, n = date.today(), goal_min(d), 0
+    day, g, n = clock.today(), goal_min(d), 0
     if studied(d, day) < g: day -= timedelta(1)
     while g > 0 and studied(d, day) >= g: n += 1; day -= timedelta(1)
     return n

@@ -11,10 +11,11 @@ import tkinter as tk
 import customtkinter as ctk
 from PIL import Image, ImageTk
 from storage import save
-from theme import GOLD, MUTED
+from theme import GOLD, MUTED, PRIMARY
 from . import catalog as C
 from .engine import City
 from .panel import CityPanel
+from .shop import ShopOverlay
 from .render import Renderer, Camera, FX
 from .traffic import Traffic
 
@@ -28,12 +29,14 @@ class CityWidget(ctk.CTkFrame):
         top = ctk.CTkFrame(self, fg_color="transparent"); top.pack(fill="x")
         self.seg = ctk.CTkSegmentedButton(top, values=[n for _, n in C.VIEWS], command=self.set_view); self.seg.pack(side="left")
         self.seg.set(dict(C.VIEWS)[self.city.s["view"]])
+        ctk.CTkButton(top, text="🛒 Loja", width=80, command=lambda: self.shop.toggle(), **PRIMARY).pack(side="right", padx=4)
         self.toast = ctk.CTkLabel(top, text="", text_color=GOLD, font=("Segoe UI", 13, "bold")); self.toast.pack(side="right", padx=8)
         self.info = ctk.CTkLabel(top, text="", text_color=MUTED); self.info.pack(side="right", padx=8)
         self.canvas = tk.Canvas(self, height=self.H, highlightthickness=0, bg="#0a0d1a"); self.canvas.pack(fill="x", pady=4)
         self.photo = ImageTk.PhotoImage(Image.new("RGB", (self.W, self.H))); self.img_id = self.canvas.create_image(0, 0, anchor="nw", image=self.photo)
         self.canvas.bind("<Configure>", self.on_size); self.canvas.bind("<ButtonRelease-1>", self.on_click)   # só clique (selecionar quadrado)
         self.panel = CityPanel(self, self); self.panel.pack(fill="both", expand=True)
+        self.shop = ShopOverlay(self, self)                               # overlay da loja (aparece por cima da cidade)
         self.traffic.sync(self.city, self.now()); self.fit(); self.start()
 
     # ---------- ciclo de vida ----------
@@ -84,7 +87,7 @@ class CityWidget(ctk.CTkFrame):
         """Estado mudou: salva, ressincroniza carros, reenquadra se a região mudou e atualiza painel/cabeçalho."""
         save(self.app.data); self.traffic.sync(self.city, self.now())
         if force_fit or self.city.region() != self.reg: self.fit()
-        self.panel.refresh(); self.app.update_header()
+        self.panel.refresh(); self.shop.refresh(); self.app.update_header()
 
     def fit(self):
         self.reg = self.city.region(); self.cam.fit(self.reg, self.W, self.H, self.R.tall(self.city, self.reg)); self.R.prewarm(self.city, self.cam)
@@ -95,12 +98,11 @@ class CityWidget(ctk.CTkFrame):
     def on_minute(self):
         """Chamado pelo FocusTab a cada minuto de foco: XP para o prédio em foco + checagem do dia."""
         self.apply(self.city.study(1))
-    def dev_days(self, n):
-        ev = []
-        for i in range(n): ev = self.city.add_day(quiet=i < n - 1)
-        self.apply(ev)
+    def reload(self):
+        """Recria a cidade a partir do data.json (usado pelo Admin ao reiniciar)."""
+        self.city = City(self.app.data); self.city.sync_days(); self.traffic.sync(self.city, self.now()); self.fit(); self.panel.refresh(); self.shop.refresh()
     def refresh(self):
-        self.info.configure(text=f"{self.city.D} dias • {len(self.city.s['t'])} quadrados"); self.panel.refresh()
+        self.info.configure(text=f"{self.city.D} dias • {len(self.city.s['t'])} quadrados"); self.panel.refresh(); self.shop.refresh()
 
     # ---------- canvas ----------
     def on_size(self, e):

@@ -1,3 +1,5 @@
+import clock
+from util import fmt_dur
 import time
 from datetime import date
 import customtkinter as ctk
@@ -28,7 +30,6 @@ class FocusTab(ctk.CTkFrame):
         self.btn.pack(pady=10, padx=20, fill="x")
         ctk.CTkButton(L, text="↺ Reiniciar", fg_color="gray30", command=self.restart).pack(padx=20, fill="x")
         ctk.CTkButton(L, text="⚙ Configurar timer", fg_color="gray30", command=self.settings).pack(padx=20, pady=(6, 0), fill="x")
-        ctk.CTkButton(L, text="🛠 +5000 pts (teste)", fg_color="gray20", command=app.dev_points).pack(padx=20, pady=(6, 0), fill="x")
         self.info = ctk.CTkLabel(L, text=f"+{PTS_PER_MIN} pontos por minuto de foco", text_color="gray70", wraplength=230); self.info.pack(pady=10)
         self.dlbl = ctk.CTkLabel(L, text="", text_color=MUTED); self.dlbl.pack()
         self.dbar = ctk.CTkProgressBar(L, height=8, progress_color=TEAL); self.dbar.set(0); self.dbar.pack(fill="x", padx=20, pady=(2, 10))
@@ -92,7 +93,7 @@ class FocusTab(ctk.CTkFrame):
 
     def award(self):
         d = self.app.data
-        s = d["sessions"].setdefault(date.today().isoformat(), {"total": 0})
+        s = d["sessions"].setdefault(clock.today().isoformat(), {"total": 0})
         s["total"] += 1; s[self.subj.get()] = s.get(self.subj.get(), 0) + 1
         d["points"] += PTS_PER_MIN
         self.city.on_minute()    # XP para o prédio em foco e, ao bater a meta diária, um novo quadrado na cidade (também salva e atualiza o cabeçalho)
@@ -131,8 +132,8 @@ class FocusTab(ctk.CTkFrame):
         build(c["mode"])
 
     def update_goal(self):
-        d = self.app.data; g, got = goal_min(d), studied(d, date.today())
-        self.dlbl.configure(text=f"Meta de hoje: {got}/{g} min"); animate(self.dbar, min(1, got / g) if g else 0, 600, True)
+        d = self.app.data; g, got = goal_min(d), studied(d, clock.today())
+        self.dlbl.configure(text=f"Meta de hoje: {fmt_dur(got)} / {fmt_dur(g)}"); animate(self.dbar, min(1, got / g) if g else 0, 600, True)
 
     def refresh(self):
         self.subj.configure(values=list(self.app.data["subjects"]) + ["Geral"])

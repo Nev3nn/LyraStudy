@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from . import catalog as C
 
 BG, SLAB, LOTC, SPARE = (10, 13, 26), (15, 19, 38), (28, 35, 56), (22, 40, 34)
+ASPH, ARROW, DASH = (40, 45, 66), (150, 160, 195), (120, 98, 48)   # asfalto, setas de mão única e tracejado
 GRID, GRID6 = (22, 27, 54), (42, 51, 88)
 PLAT = [((25, 35, 69), (53, 224, 255)), ((31, 42, 90), (124, 108, 240)), ((42, 42, 78), (242, 184, 75))]
 GOLD, CYAN, TEAL = (242, 184, 75), (53, 224, 255), (63, 184, 165)
@@ -36,6 +37,10 @@ class Renderer:
         self.meta, self._src, self._sc, self._key, self._base, self._occ, self.tops = C.meta(), {}, {}, None, None, [], {}
         try: self.font = ImageFont.load_default(size=11)
         except TypeError: self.font = ImageFont.load_default()
+
+    def clone(self):
+        """Outro renderer (ex.: minimapa da loja) que COMPARTILHA os caches de sprites."""
+        r = Renderer.__new__(Renderer); r.meta, r._src, r._sc, r._key, r._base, r._occ, r.tops, r.font = self.meta, self._src, self._sc, None, None, [], {}, self.font; return r
 
     # ---- sprites ----
     def sprite(self, key):
@@ -84,10 +89,29 @@ class Renderer:
         for xv in xs: d.line([P(xv, y0, z), P(xv, y0 + hh, z)], fill=mix(gl, base, .35), width=1 + kd)
         for yv in ys: d.line([P(x0, yv, z), P(x0 + ww, yv, z)], fill=mix(gl, base, .35), width=1 + kd)
 
+    # ---- malha viária ----
+    def _roads(self, d, P, R, cov, zof, dev, k):
+        """Asfalto em todas as linhas da grade. Onde há lotes desenvolvidos entram setas/tracejado (mão única: ↘ ao longo de x e ↙ ao longo de y)."""
+        x0, y0, x1, y1 = R; hw = C.ROAD_W / 2; marks = k >= 9
+        for j in range(y0, y1 + 1):
+            ya, yb = max(y0, j - hw), min(y1, j + hw)
+            for x in range(x0, x1):
+                z = max(zof((x, j - 1)), zof((x, j))); d.polygon([P(x, ya, z), P(x + 1, ya, z), P(x + 1, yb, z), P(x, yb, z)], fill=ASPH)
+                if marks and ((x, j - 1) in dev or (x, j) in dev):
+                    if (x + j) % 2 == 0: d.polygon([P(x + .63, j, z + .004), P(x + .42, j - .07, z + .004), P(x + .42, j + .07, z + .004)], fill=ARROW)
+                    else: d.line([P(x + .3, j, z + .004), P(x + .7, j, z + .004)], fill=DASH)
+        for i in range(x0, x1 + 1):
+            xa, xb = max(x0, i - hw), min(x1, i + hw)
+            for y in range(y0, y1):
+                z = max(zof((i - 1, y)), zof((i, y))); d.polygon([P(xa, y, z), P(xb, y, z), P(xb, y + 1, z), P(xa, y + 1, z)], fill=ASPH)
+                if marks and ((i - 1, y) in dev or (i, y) in dev):
+                    if (i + y) % 2 == 0: d.polygon([P(i, y + .63, z + .004), P(i - .07, y + .42, z + .004), P(i + .07, y + .42, z + .004)], fill=ARROW)
+                    else: d.line([P(i, y + .3, z + .004), P(i, y + .7, z + .004)], fill=DASH)
+
     # ---- camada estática (tudo menos carros) ----
-    def _static(self, city, cam, W, H, t, fx):
+    def _static(self, city, cam, W, H, t, fx, view=None):
         img = Image.new("RGB", (W, H), BG); d = ImageDraw.Draw(img); P, k, S = cam.P, cam.k, city.s
-        R = city.region(); G = city.geom(); plats = city.plats_for(G, R); x0, y0, x1, y1 = R; occ, objs, self.tops = [], [], {}; M = C.STREET / 2
+        R = city.region(view); G = city.geom(); plats = city.plats_for(G, R, view); x0, y0, x1, y1 = R; occ, objs, self.tops = [], [], {}; M = C.STREET / 2
         glow_year = city.jn() == C.PER
         d.polygon([P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)], fill=SLAB)
         d.polygon([P(x1, y0), P(x1, y1), P(x1, y1, -.5), P(x1, y0, -.5)], fill=sh(SLAB, .5)); d.polygon([P(x0, y1), P(x1, y1), P(x1, y1, -.5), P(x0, y1, -.5)], fill=sh(SLAB, .7))
@@ -102,6 +126,7 @@ class Renderer:
             a = next((a for a in fx.anims if a["rect"] == (gx, gy, w, h)), None); p = (t - a["t0"]) / a["dur"] if a else None
             self._plat(d, P, rect, 1 if p is None else max(.01, back(clamp((p - .35) / .65))), (.5 + .5 * math.sin(t * 2.5)) if (p is None and kd == 2) else (0 if p is None else math.sin(math.pi * p)))
         zof = lambda key: (.02, .05, .1, .16)[cov.get(key, -1) + 1]
+        self._roads(d, P, R, cov, zof, G["dev"], k)                          # malha viária: ruas de mão única entre lotes
 
         def lamp(x, y, z):
             d.line([P(x, y, z), P(x, y, z + .16)], fill=(89, 96, 127)); q = P(x, y, z + .17); r = max(1.2, k * .05)
@@ -132,7 +157,7 @@ class Renderer:
             objs.append((x + dx + y + dy + 1, cell))
         for (x, y) in G["spare"]:
             if not (x0 <= x < x1 and y0 <= y < y1): continue
-            z, st = zof((x, y)), city.plaza_style(x, y)
+            z, st = zof((x, y)), S["pz"].get(f"{x},{y}")
             def pz(x=x, y=y, z=z, st=st):
                 lot(x, y, z, SPARE if st else LOTC)
                 if not st: return
@@ -148,23 +173,24 @@ class Renderer:
         return img, occ
 
     # ---- quadro final ----
-    def render(self, city, cam, W, H, t, fx, cars, running=False):
-        key = (city.rev, city.s["view"], round(cam.k, 2), round(cam.ox), round(cam.oy), W, H)
-        if fx.active() or key != self._key: self._base, self._occ = self._static(city, cam, W, H, t, fx); self._key = key if not fx.active() else None
+    def render(self, city, cam, W, H, t, fx, cars, running=False, view=None, overlay=True):
+        key = (city.rev, view or city.s["view"], round(cam.k, 2), round(cam.ox), round(cam.oy), W, H)
+        if fx.active() or key != self._key: self._base, self._occ = self._static(city, cam, W, H, t, fx, view); self._key = key if not fx.active() else None
         img = self._base.copy(); occ = self._occ; P = cam.P; meta = self.meta
-        R = city.region()
+        R = city.region(view)
         for c in sorted(cars, key=lambda c: c["x"] + c["dx"] * c["t"] + c["y"] + c["dy"] * c["t"]):
             x, y = c["x"] + c["dx"] * c["t"], c["y"] + c["dy"] * c["t"]
             if not (R[0] <= x <= R[2] and R[1] <= y <= R[3]): continue
             key_ = "cars/" + c["m"]; w, h = self.car_size(c["m"], cam, self.car_step(back(clamp((t - c["born"]) / .5))))   # entrada do carro usa tamanhos pré-aquecidos
-            spr = self.scaled(key_, w, h, bool(c["dx"])); sx, sy = P(x + (.14 if c["dx"] else 0) + (-.14 if c["dy"] else 0), y + (.14 if c["dx"] else 0) , 0)
+            spr = self.scaled(key_, w, h, bool(c["dx"])); sx, sy = P(x, y, .01)   # mão única: carro no eixo da rua
             px, py = int(sx - w / 2), int(sy - h * .8); img.paste(spr, (px, py), spr); dep = x + y
             for od, (l, tp, r, b), osp in occ:                           # oclusão: prédios/praças À FRENTE do carro são colados de novo por cima
                 if od > dep + .02 and l < px + w and r > px and tp < py + h and b > py: img.paste(osp, (l, tp), osp)
-        self._overlay(img, city, cam, t, running); return img
+        if overlay: self._overlay(img, city, cam, t, running, view)
+        return img
 
-    def _overlay(self, img, city, cam, t, running):
-        d = ImageDraw.Draw(img); P, S = cam.P, city.s; R = city.region(); pulse = .6 + .4 * math.sin(t * 4)
+    def _overlay(self, img, city, cam, t, running, view=None):
+        d = ImageDraw.Draw(img); P, S = cam.P, city.s; R = city.region(view); pulse = .6 + .4 * math.sin(t * 4)
         def tile_xy(i):
             if not (city.ys() <= i < city.D): return None
             x, y = city.pos(i - city.ys()); return (x, y) if R[0] <= x < R[2] and R[1] <= y < R[3] else None

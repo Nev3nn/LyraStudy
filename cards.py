@@ -1,3 +1,4 @@
+import clock
 import uuid
 from copy import copy
 from datetime import date
@@ -58,7 +59,7 @@ class CardsTab(ctk.CTkFrame):
 
     def refresh(self):
         self.seg.set(self.mode)
-        today = date.today().isoformat()
+        today = clock.today().isoformat()
         due = [c for c in self.app.data["cards"] if c["due"] <= today and self.match(c)]
         self.queue = [c["id"] for c in sorted(due, key=lambda c: c["due"])]
         self.show_ans = False
@@ -75,7 +76,7 @@ class CardsTab(ctk.CTkFrame):
         if im: ctk.CTkLabel(parent, text="", image=im).pack(pady=6)
 
     def study(self):
-        d = self.app.data; today = date.today().isoformat()
+        d = self.app.data; today = clock.today().isoformat()
         top = ctk.CTkFrame(self.body, fg_color="transparent"); top.pack(fill="x", pady=(0, 6))
         labs = ["Todas"] + self.cat_labels(self.f_sub)
         if self.f_cat not in labs: self.f_cat = "Todas"
@@ -202,7 +203,7 @@ class CardsTab(ctk.CTkFrame):
                 if self.orig.get(s) and self.orig[s] != self.img[s]: images.remove(self.orig[s])
             self.get(self.editing).update(rec)
         else:
-            d["cards"].append({"id": uuid.uuid4().hex[:8], **rec, "due": date.today().isoformat(), "interval": 0, "ease": 2.5, "reps": 0})
+            d["cards"].append({"id": uuid.uuid4().hex[:8], **rec, "due": clock.today().isoformat(), "interval": 0, "ease": 2.5, "reps": 0})
         self.last_sub = rec["subject"]; save(d); self.reset_form(); self.render()
 
     def edit(self, cid):

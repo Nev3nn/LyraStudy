@@ -1,3 +1,5 @@
+import clock
+from util import fmt_dur
 from datetime import date, timedelta
 from tkinter import messagebox
 import customtkinter as ctk
@@ -54,28 +56,28 @@ class PlanTab(ctk.CTkFrame):
     def finish(self, h, n):
         w = {s: int(round(sl.get())) for s, sl in self.sl.items()}
         n = min(n, len(w)); d = self.app.data
-        d.update(subjects=w, daily_goal_h=h, per_day=n, schedule=build_schedule(w, h, n), schedule_date=date.today().isoformat())
+        d.update(subjects=w, daily_goal_h=h, per_day=n, schedule=build_schedule(w, h, n), schedule_date=clock.today().isoformat())
         self.app.commit()
 
     # ---------- Cronograma + To-Do ----------
     def view(self):
         d = self.app.data; wm = weekly_minutes(d["subjects"], d["daily_goal_h"])
-        top = header(self, "🗓 Cronograma", f"{d['daily_goal_h']:g} h/dia • {sum(wm.values()) / 60:.1f} h/semana • {d['per_day']} matéria(s)/dia")
+        top = header(self, "🗓 Cronograma", f"{fmt_dur(d['daily_goal_h'] * 60)}/dia • {fmt_dur(sum(wm.values()))}/semana • {d['per_day']} matéria(s)/dia")
         ctk.CTkButton(top, text="Reconfigurar", width=110, fg_color="gray30", command=lambda: (self.clear(), self.wizard())).pack(side="right")
         ctk.CTkButton(top, text="🔄 Reajustar (últimos 3 simulados)", width=240, command=self.readjust, **PRIMARY).pack(side="right", padx=8)
         main = ctk.CTkFrame(self, fg_color="transparent"); main.pack(fill="both", expand=True)
         left = ctk.CTkScrollableFrame(main, label_text="Grade semanal"); left.pack(side="left", fill="both", expand=True, padx=(0, 6))
         sm = ctk.CTkFrame(left, fg_color="transparent"); sm.pack(fill="x", pady=(0, 6))
         for i, (s, m) in enumerate(sorted(wm.items(), key=lambda x: -x[1])):
-            chip(sm, f"{s} · {m // 60}h{m % 60:02d} · dif. {d['subjects'][s]}", tag_color(s)).grid(row=i // 3, column=i % 3, padx=3, pady=2, sticky="w")
+            chip(sm, f"{s} · {fmt_dur(m)} · dif. {d['subjects'][s]}", tag_color(s)).grid(row=i // 3, column=i % 3, padx=3, pady=2, sticky="w")
         grid = ctk.CTkFrame(left, fg_color="transparent"); grid.pack(fill="x")
         for c in range(4): grid.columnconfigure(c, weight=1, uniform="d")
         for i, day in enumerate(DAYS):
-            hoje = i == date.today().weekday(); tasks = d["schedule"].get(day, [])
+            hoje = i == clock.today().weekday(); tasks = d["schedule"].get(day, [])
             card = ctk.CTkFrame(grid, border_width=2, border_color=VIOLET if hoje else EDGE)
             card.grid(row=i // 4, column=i % 4, padx=4, pady=4, sticky="nsew")
             ctk.CTkLabel(card, text=day + (" • hoje" if hoje else ""), font=("Segoe UI", 13, "bold"), text_color=GOLD if hoje else None).pack(anchor="w", padx=10, pady=(8, 0))
-            ctk.CTkLabel(card, text=f"{sum(t['minutes'] for t in tasks)} min", text_color=MUTED).pack(anchor="w", padx=10)
+            ctk.CTkLabel(card, text=fmt_dur(sum(t["minutes"] for t in tasks)), text_color=MUTED).pack(anchor="w", padx=10)
             for t in tasks: chip(card, f"{t['subject']} · {t['minutes']}m", tag_color(t["subject"])).pack(anchor="w", padx=8, pady=2)
             ctk.CTkLabel(card, text="", height=4).pack()
         right = ctk.CTkScrollableFrame(main, label_text="To-Do", width=300); right.pack(side="left", fill="y")
@@ -88,7 +90,7 @@ class PlanTab(ctk.CTkFrame):
         self.mode = m; self.refresh()
 
     def todo(self, parent):
-        d, today = self.app.data, date.today(); self.today_keys = []
+        d, today = self.app.data, clock.today(); self.today_keys = []
         days = [today] if self.mode == "Hoje" else [today - timedelta(today.weekday()) + timedelta(i) for i in range(7)]
         for day in days:
             tasks = d["schedule"].get(DAYS[day.weekday()], [])
@@ -98,7 +100,7 @@ class PlanTab(ctk.CTkFrame):
                 key = f"{day.isoformat()}|{t['subject']}"
                 if day == today: self.today_keys.append(key)
                 var = ctk.BooleanVar(value=d["todo"].get(key, False))
-                ctk.CTkCheckBox(parent, text=f"{t['subject']} — {t['minutes']} min", variable=var,
+                ctk.CTkCheckBox(parent, text=f"{t['subject']} — {fmt_dur(t['minutes'])}", variable=var,
                                 command=lambda k=key, v=var: self.check(k, v)).pack(anchor="w", pady=3)
 
     def upd_todo(self, first=False):

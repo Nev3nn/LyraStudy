@@ -1,0 +1,8 @@
+{
+  "_ajuda": "Cada PNG se chama nivel_<NIVEL>-<LETRA>.png (ex.: nivel_2-c.png). Cada LETRA é um modelo de prédio; os níveis são os arquivos que existirem (1, 2, 3, 4...). Para adicionar um modelo novo: coloque os PNGs (fundo branco) e acrescente a letra aqui; depois rode: python tools/process_assets.py",
+  "a": { "id": "mad", "n": "Biblioteca de Madeira", "p": 0 },
+  "b": { "id": "tij", "n": "Residência de Tijolos", "p": 0 },
+  "c": { "id": "vid", "n": "Torre de Vidro", "p": 600 },
+  "d": { "id": "eco", "n": "Eco Escritório", "p": 900 },
+  "e": { "id": "got", "n": "Capela Gótica", "p": 1400 }
+}

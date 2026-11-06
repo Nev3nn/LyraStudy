@@ -1,3 +1,5 @@
+import clock
+from util import fmt_dur
 import calendar
 from datetime import date
 import customtkinter as ctk
@@ -7,8 +9,7 @@ from theme import GOLD, TEAL, RED, VIOLET, MUTED, EDGE, INK, LV, tag_color, coun
 MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 C_NONE, C_HALF, C_FUT = "#4a2f3a", "#8a6d2a", "#1b2038"
 
-def hm(m):
-    return f"{int(m) // 60}h{int(m) % 60:02d}"
+hm = fmt_dur   # 150 min -> "2h e 30 min"
 
 def build(tab):
     d = tab.app.data; y, m = tab.month; ms = month_stats(d, y, m); gr = grade(d, y, m)
@@ -57,7 +58,7 @@ def build(tab):
             if not day: continue
             v, g = mins[day], ms["goal"]
             col = C_FUT if v is None else TEAL if v >= g else C_HALF if v >= g / 2 else C_NONE
-            if date(y, m, day) == date.today() and col != TEAL: col = VIOLET
+            if date(y, m, day) == clock.today() and col != TEAL: col = VIOLET
             ctk.CTkLabel(grid, text=str(day), width=40, height=30, corner_radius=8, fg_color=col,
                          text_color=INK if col == TEAL else "white").grid(row=r, column=c, padx=2, pady=2)
     lg = ctk.CTkFrame(s, fg_color="transparent"); lg.pack(pady=(0, 10))

@@ -84,16 +84,35 @@ def save(path, im):
     p = os.path.join(OUT, path + ".webp"); os.makedirs(os.path.dirname(p), exist_ok=True)
     im.save(p, "WEBP", quality=88, method=6); M[path] = meta(im); return M[path]
 
-# ---- prédios: (id, folha, deslocamento de matiz) -> níveis = sprites da folha, do menor para o maior
-BUILD = [("casa", "predio", 0), ("bib", "predio_2", 0), ("lab", "predio_5", 0), ("cow", "predio", 90), ("mus", "predio_2", 150),
-         ("hub", "predio_5", 110), ("neo", "predio_3", 0), ("eco", "predio_4", 0), ("ony", "predio_3", 85), ("sol", "predio_4", -75)]
-cache = {}
-for bid, sheet, shift in BUILD:
-    if sheet not in cache:
-        img = Image.open(os.path.join(SRC, sheet + ".png")); lab, d, gr = comps(img)
-        cache[sheet] = [cut(img, lab, d, g["ids"]) for g in gr]
-    for lv, im in enumerate(cache[sheet], 1): save(f"buildings/{bid}_{lv}", trim_base(tint(im, shift) if shift else im))
-    print(bid, sheet, "níveis:", len(cache[sheet]))
+# ---- prédios: art-source/buildings/nivel_<N>-<letra>.png (fundo BRANCO) + families.json (letra -> id, nome, preço) ----
+def key_white(img, tol=12, shadow=40):
+    """Remove o fundo branco por preenchimento a partir das bordas (as paredes brancas DENTRO do prédio são preservadas)
+    e uma segunda passada, mais tolerante, só para as sombras suaves cinza-claro que encostam no fundo."""
+    a = np.asarray(img.convert("RGB")).astype(int); dist = (255 - a).max(2); sat = a.max(2) - a.min(2)
+    def flood(mask):
+        lab, n = ndi.label(mask); b = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])); b = b[b > 0]
+        return np.isin(lab, b)
+    bg = flood(dist <= tol); bg |= flood(ndi.binary_dilation(bg, iterations=2) & (dist <= shadow) & (sat <= 16)) | bg
+    fg = ndi.binary_fill_holes(~bg); lab, n = ndi.label(fg); sizes = ndi.sum(fg, lab, range(1, n + 1))
+    fg = np.isin(lab, [i + 1 for i, v in enumerate(sizes) if v > 400]); fg = ndi.binary_erosion(fg, iterations=1)
+    alpha = ndi.gaussian_filter(fg.astype(float), .7)
+    ys, xs = np.where(alpha > .02); rgba = np.dstack([a.astype(np.uint8), (alpha * 255).astype(np.uint8)])
+    return Image.fromarray(rgba, "RGBA").crop((max(0, xs.min() - 2), max(0, ys.min() - 2), xs.max() + 3, ys.max() + 3))
+
+def meta_base(im):
+    """bw = largura da plataforma da base (maior extensão nas 25% de baixo); ax = centro dela (fração da largura)."""
+    a = np.asarray(im)[..., 3] > 120; H = a.shape[0]; band = a[int(H * .75):]; ext = [(np.where(r)[0].min(), np.where(r)[0].max()) for r in band if r.any()]
+    lo, hi = min(e[0] for e in ext), max(e[1] for e in ext)
+    return {"w": im.width, "h": im.height, "bw": int(hi - lo + 1), "ax": round(float((lo + hi) / 2 / im.width), 3)}
+
+BDIR = os.path.join(SRC, "buildings"); fam = json.load(open(os.path.join(BDIR, "families.json"), encoding="utf-8")); models = []
+for letter, info in sorted((k, v) for k, v in fam.items() if not k.startswith("_")):
+    levels = sorted(int(f.split("-")[0].split("_")[1]) for f in os.listdir(BDIR) if f.endswith(f"-{letter}.png") and f.startswith("nivel_"))
+    for lv in levels:
+        im = key_white(Image.open(os.path.join(BDIR, f"nivel_{lv}-{letter}.png"))); p = os.path.join(OUT, "buildings", f"{info['id']}_{lv}.webp")
+        os.makedirs(os.path.dirname(p), exist_ok=True); im.save(p, "WEBP", quality=90, method=6); M[f"buildings/{info['id']}_{lv}"] = meta_base(im)
+    models.append({"id": info["id"], "n": info["n"], "p": info["p"], "max": max(levels)}); print(info["id"], "níveis:", levels)
+with open(os.path.join(OUT, "buildings.json"), "w", encoding="utf-8") as f: json.dump({"models": models}, f, ensure_ascii=False, indent=1)
 
 # ---- carros: 8 por folha (2 colunas x 4 linhas), ordenados por linha/coluna
 CARS = [("car_a", "carros", 3, 0, None), ("car_b", "carros", 3, 1, None), ("car_c", "carros_2", 1, 0, (225, 45, 70)),
